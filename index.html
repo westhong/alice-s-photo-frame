@@ -657,11 +657,40 @@
     }
 
     // ── Save ──────────────────────────────────────────────────────────────
+    // iOS Safari does NOT support <a download> + .click()
+    // Must use Web Share API (navigator.share) → opens native Share Sheet
+    // Desktop fallback: Blob URL + anchor click
     saveBtn.addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = `alice-photo-${Date.now()}.png`;
-        link.href = resultCanvas.toDataURL('image/png');
-        link.click();
+        const fileName = `alice-photo-${Date.now()}.png`;
+
+        resultCanvas.toBlob(async (blob) => {
+            // ── iOS / modern mobile: Web Share API with file ──
+            if (navigator.share && navigator.canShare) {
+                const file = new File([blob], fileName, { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: "Alice's Photo 🌸",
+                        });
+                        return; // done — user taps "Save Image" in share sheet
+                    } catch (err) {
+                        if (err.name === 'AbortError') return; // user cancelled, that's fine
+                        // fall through to desktop fallback
+                    }
+                }
+            }
+
+            // ── Desktop fallback: Blob URL download ──
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }, 'image/png');
     });
 
     // ── Change filter (go back to filter screen) ──────────────────────────
