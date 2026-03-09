@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ Alice's Photo Frame</title>
+    <meta name="theme-color" content="#d946ef">
+    <meta name="description" content="Alice's magical photo frame — add cute frames and watermarks to your photos!">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+            background: linear-gradient(135deg, #ffeef8 0%, #e7d5ff 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Upload Screen */
+        .upload-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .logo {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        h1 {
+            color: #d946ef;
+            font-size: 32px;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 4px rgba(217, 70, 239, 0.2);
+        }
+
+        .upload-button {
+            background: linear-gradient(135deg, #ff6ec7 0%, #d946ef 100%);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 24px 48px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(217, 70, 239, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-button:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(217, 70, 239, 0.5);
+        }
+
+        .upload-button:active {
+            transform: translateY(-2px);
+        }
+
+        .upload-button::before {
+            content: '📸';
+            font-size: 32px;
+            margin-right: 12px;
+        }
+
+        /* Processing Screen */
+        .processing-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            border-top: 8px solid #ff6ec7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 30px;
+        }
+
+        .processing-text {
+            color: #d946ef;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        /* Result Screen */
+        .result-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .photo-container {
+            background: white;
+            padding: 15px;
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            margin-bottom: 30px;
+            max-width: 100%;
+        }
+
+        #resultCanvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .save-button {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            padding: 24px 48px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+
+        .save-button:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(16, 185, 129, 0.5);
+        }
+
+        .save-button:active {
+            transform: translateY(-2px);
+        }
+
+        .save-button::before {
+            content: '💾';
+            font-size: 36px;
+            margin-right: 12px;
+        }
+
+        .new-photo-button {
+            background: transparent;
+            color: #d946ef;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 16px 32px;
+            border: 3px solid #d946ef;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .new-photo-button:hover {
+            background: #d946ef;
+            color: white;
+        }
+
+        /* Hidden file input */
+        #fileInput {
+            display: none;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Mobile optimization */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 28px;
+            }
+
+            .upload-button, .save-button {
+                font-size: 20px;
+                padding: 20px 40px;
+            }
+
+            .logo {
+                font-size: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Upload Screen -->
+    <div class="upload-screen" id="uploadScreen">
+        <div class="logo">✨📷✨</div>
+        <h1>Alice's Photo Frame</h1>
+        <button class="upload-button" id="uploadBtn">
+            Upload Photo
+        </button>
+        <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <!-- Processing Screen -->
+    <div class="processing-screen" id="processingScreen">
+        <div class="spinner"></div>
+        <div class="processing-text">Adding magic... ✨</div>
+    </div>
+
+    <!-- Result Screen -->
+    <div class="result-screen" id="resultScreen">
+        <div class="photo-container">
+            <canvas id="resultCanvas"></canvas>
+        </div>
+        <button class="save-button" id="saveBtn">
+            Save to Phone
+        </button>
+        <button class="new-photo-button" id="newPhotoBtn">
+            📸 Try Another Photo
+        </button>
+    </div>
+
+    <script>
+        const uploadScreen = document.getElementById('uploadScreen');
+        const processingScreen = document.getElementById('processingScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('fileInput');
+        const saveBtn = document.getElementById('saveBtn');
+        const newPhotoBtn = document.getElementById('newPhotoBtn');
+        const resultCanvas = document.getElementById('resultCanvas');
+        const ctx = resultCanvas.getContext('2d');
+
+        // Configuration
+        const FRAME_WIDTH = 30;
+        const WATERMARK_TEXT = 'photo by Alice';
+        const WATERMARK_FONT_SIZE = 24;
+        const WATERMARK_PADDING = 20;
+
+        // Click upload button to trigger file input
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Handle file selection
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processImage(file);
+            }
+        });
+
+        // Process image: add frame and watermark
+        function processImage(file) {
+            // Switch to processing screen
+            uploadScreen.style.display = 'none';
+            processingScreen.style.display = 'flex';
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Simulate processing time for better UX
+                    setTimeout(() => {
+                        addFrameAndWatermark(img);
+                        
+                        // Switch to result screen
+                        processingScreen.style.display = 'none';
+                        resultScreen.style.display = 'flex';
+                    }, 800);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Add white frame and watermark to image
+        function addFrameAndWatermark(img) {
+            const frameWidth = FRAME_WIDTH;
+            const totalWidth = img.width + frameWidth * 2;
+            const totalHeight = img.height + frameWidth * 2;
+
+            // Set canvas size
+            resultCanvas.width = totalWidth;
+            resultCanvas.height = totalHeight;
+
+            // Draw white frame (background)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, totalWidth, totalHeight);
+
+            // Draw original image
+            ctx.drawImage(img, frameWidth, frameWidth, img.width, img.height);
+
+            // Add watermark text
+            ctx.font = `${WATERMARK_FONT_SIZE}px 'Comic Sans MS', Arial`;
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+
+            // Add shadow for better readability
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+
+            // Draw text
+            ctx.fillText(
+                WATERMARK_TEXT,
+                totalWidth - WATERMARK_PADDING - frameWidth,
+                totalHeight - WATERMARK_PADDING - frameWidth
+            );
+        }
+
+        // Save image to phone
+        saveBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `alice-photo-${Date.now()}.png`;
+            link.href = resultCanvas.toDataURL('image/png');
+            link.click();
+        });
+
+        // Try another photo
+        newPhotoBtn.addEventListener('click', () => {
+            resultScreen.style.display = 'none';
+            uploadScreen.style.display = 'flex';
+            fileInput.value = ''; // Reset file input
+        });
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('[App] SW registered:', reg.scope))
+                    .catch(err => console.log('[App] SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
