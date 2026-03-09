@@ -229,15 +229,33 @@
             padding: 15px;
             border-radius: 20px;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-            margin-bottom: 30px;
+            margin-bottom: 16px;
             max-width: 100%;
         }
 
-        #resultCanvas {
+        /* resultCanvas is hidden — only used for rendering */
+        #resultCanvas { display: none; }
+
+        /* resultImg is what the user sees and can long-press on iOS */
+        #resultImg {
             display: block;
             max-width: 100%;
             height: auto;
             border-radius: 8px;
+            -webkit-touch-callout: default; /* enable iOS long-press menu */
+        }
+
+        .ios-hint {
+            font-size: 13px;
+            color: #a855f7;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px 16px;
+            background: rgba(168,85,247,0.08);
+            border-radius: 12px;
+            line-height: 1.5;
+            max-width: 400px;
+            width: 100%;
         }
 
         .save-button {
@@ -384,10 +402,17 @@
 
     <!-- ── Result Screen ── -->
     <div class="result-screen" id="resultScreen">
+        <!-- hidden canvas for rendering -->
+        <canvas id="resultCanvas" style="display:none"></canvas>
+        <!-- visible img — iOS long-press → "Add to Photos" -->
         <div class="photo-container">
-            <canvas id="resultCanvas"></canvas>
+            <img id="resultImg" alt="Your framed photo">
         </div>
-        <button class="save-button" id="saveBtn">Save to Phone</button>
+        <button class="save-button" id="saveBtn">💾 Save to Camera Roll</button>
+        <div class="ios-hint" id="iosHint">
+            📱 Tap the button above — then tap <strong>"Save Image"</strong><br>
+            or <strong>long-press the photo</strong> → "Add to Photos"
+        </div>
         <div class="row-btns">
             <button class="refilter-button" id="refilterBtn">🎨 Change Filter</button>
             <button class="new-photo-button" id="newPhotoBtn">📸 New Photo</button>
@@ -612,6 +637,12 @@
         }, 500);
     });
 
+    // After rendering canvas, also update the visible <img> for long-press save on iOS
+    function updateResultImg() {
+        const resultImg = document.getElementById('resultImg');
+        resultImg.src = resultCanvas.toDataURL('image/png');
+    }
+
     function renderResult(filterId) {
         const f          = FILTERS.find(x => x.id === filterId);
         const img        = originalImg;
@@ -654,17 +685,21 @@
             totalH - WATERMARK_PAD - fw
         );
         rCtx.shadowColor = 'transparent';
+
+        // Update visible img tag (enables iOS long-press → Add to Photos)
+        updateResultImg();
     }
 
     // ── Save ──────────────────────────────────────────────────────────────
-    // iOS Safari does NOT support <a download> + .click()
-    // Must use Web Share API (navigator.share) → opens native Share Sheet
-    // Desktop fallback: Blob URL + anchor click
+    // Strategy:
+    //   iOS Safari  → Web Share API → Share Sheet → tap "Save Image" → Camera Roll
+    //   Desktop     → Blob URL download
+    // ALSO: resultImg is an <img> tag — iOS users can long-press → "Add to Photos"
     saveBtn.addEventListener('click', () => {
         const fileName = `alice-photo-${Date.now()}.png`;
 
         resultCanvas.toBlob(async (blob) => {
-            // ── iOS / modern mobile: Web Share API with file ──
+            // ── iOS / modern mobile: Web Share API ──
             if (navigator.share && navigator.canShare) {
                 const file = new File([blob], fileName, { type: 'image/png' });
                 if (navigator.canShare({ files: [file] })) {
@@ -673,15 +708,14 @@
                             files: [file],
                             title: "Alice's Photo 🌸",
                         });
-                        return; // done — user taps "Save Image" in share sheet
+                        return;
                     } catch (err) {
-                        if (err.name === 'AbortError') return; // user cancelled, that's fine
-                        // fall through to desktop fallback
+                        if (err.name === 'AbortError') return;
+                        // fall through
                     }
                 }
             }
-
-            // ── Desktop fallback: Blob URL download ──
+            // ── Desktop fallback ──
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.download = fileName;
